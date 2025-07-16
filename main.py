@@ -1,23 +1,33 @@
 import pandas as pd
 import streamlit as st
 import numpy as np
+
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.naive_bayes import GaussianNB
+import matplotlib.pyplot as plt
 
-
-def predictProba(org_value,sex_value,pr, stage, age, height_input,weight_input,bmi, waist, smoke, smoke_age, smoker_result, CHSS, ADS, ADD, respiratory_rate,
-                    chemical_factor, dust, work_difficult):
-    data = np.array([[org_value,sex_value,pr, stage, age, height_input,weight_input,bmi, waist, smoke, smoke_age, smoker_result, CHSS, ADS, ADD, respiratory_rate,
-                    chemical_factor, dust, work_difficult]])
+def predictProba(sex, bmi, smoke_index, waist, dermatitis, hay_fever,
+        food_allergy, a_medications, cough, smoking_products,
+        chemical, dust, lowt, hight):
+    data = np.array([[sex, bmi, smoke_index, waist, dermatitis, hay_fever,
+        food_allergy, a_medications, cough, smoking_products,
+        chemical, dust, lowt, hight]])
+    print('hello')
     return model.predict_proba(data)
 
-
-def predictDisease(org_value,sex_value,pr, stage, age, height_input,weight_input,bmi, waist, smoke, smoke_age, smoker_result, CHSS, ADS, ADD, respiratory_rate,
-                    chemical_factor, dust, work_difficult):
-    data = np.array([[org_value,sex_value,pr, stage, age, height_input,weight_input,bmi, waist, smoke, smoke_age, smoker_result, CHSS, ADS, ADD, respiratory_rate,
-                    chemical_factor, dust, work_difficult]])
+def predictDisease(sex, bmi, smoke_index, waist, dermatitis, hay_fever,
+        food_allergy, a_medications, cough, smoking_products,
+        chemical, dust, lowt, hight):
+    data = np.array([[sex, bmi, smoke_index, waist, dermatitis, hay_fever,
+        food_allergy, a_medications, cough, smoking_products,
+        chemical, dust, lowt, hight]])
     return model.predict(data)
 
+if 'bmi_value' not in st.session_state:
+    st.session_state.bmi_value = 0
+if 'smoke_index_value' not in st.session_state:
+    st.session_state.smoke_index_value = 0
 
 def calculate_bmi(weight, height):
     if pd.isna(weight) or pd.isna(height):
@@ -44,134 +54,46 @@ def classify_bmi(bmi_value):
     else:
         return 'Ожирение III степени'
 
-professions = [
-        'ЭЛЕКТРОМОНТЕР ПО РЕМОНТУ И ОБСЛУЖИВАНИЮ ЭЛЕКТРООБОРУДОВАНИЯ',
-        'ТЕРМИСТ', 
-        'НАЛАДЧИК ШЛИФОВАЛЬНЫХ СТАНКОВ', 
-        'ЭЛЕКТРОЭРОЗИОНИСТ',
-        'ТОКАРЬ', 
-        'СЛЕСАРЬ-РЕМОНТНИК', 
-        'МАШИНИСТ МОЕЧНЫХ МАШИН',
-        'ДОВОДЧИК-ПРИТИРЩИК', 
-        'МАСТЕР', 
-        'СЛЕСАРЬ МЕХАНОСБОРОЧНЫХ РАБОТ',
-        'ШЛИФОВЩИК', 
-        'ТРАВИЛЬЩИК', 
-        'СТАРШИЙ КЛАДОВЩИК',
-        'КОНТРОЛЕР СТАНОЧНЫХ И СЛЕСАРНЫХ РАБОТ',
-        'Оператор технологических установок',
-        'Оператор технологических установок (старший)',
-        'Слесарь по контрольно-измерительным приборам и автоматике',
-        'КОНТРОЛЕР КУЗНЕЧНО-ПРЕССОВЫХ РАБОТ', 
-        'Механик',
-        'Машинист компрессорных установок',
-        'Заместитель начальника  установки', 
-        'Начальник производства',
-        'Такелажник',
-        'Заместитель начальника производства (по процессам риформинга)',
-        'Начальник установки', 
-        'Оператор товарный', 
-        'ТРАНСПОРТИРОВЩИК',
-        'ЛАБОРАНТ-МЕТАЛЛОГРАФ', 
-        'Приборист', 
-        'Оператор',
-        'зав. убойным цехом', 
-        'начальник охраны', 
-        'бухгалтер', 
-        'птицевод',
-        'сотрудник охраны и контроля', 
-        'рабочий яйцесклада',
-        'рабочий кормоцеха', 
-        'рабочий убойного цеха', 
-        'главный экономист',
-        'главный зоотехник', 
-        'специалист отдела кадров', 
-        'главный инженер',
-        'ветсанитар', 
-        'ст. рабочий яйцесклада', 
-        'слесарь-оператор',
-        'специалист по ОТ', 
-        'главный ветеринарный врач',
-        'укладчик-упаковщик',
-        'уборщик производственных и служебных помещений',
-        'приготовитель кормов',
-        'Слесарь по ремонту технологических установок',
-        'оператор по искусственному осеменению',
-        'Электромонтер по ремонту и обслуживанию электрооборудования'
-    ]
-
 def load_model():
-    spiro = pd.read_excel('spiro_upd.xlsx')
-    
-    profession_to_number = {prof: idx + 1 for idx, prof in enumerate(professions)}
+    # Загрузка и очистка
+    spiro = pd.read_excel('spiro01.xlsx')
 
+    # Кодирование категориальных колонок
+    spiro['Пол'] = LabelEncoder().fit_transform(spiro['Пол'].astype(str))
 
-    org = [
-        'ЕПК',
-        'НПЗ', 
-        'Лысогорская птицефабрика', 
-        'Симоновская птицефабрика', 
-        'Племзавод Трудовой'
-    ]
+    # Удаляем ненужное
+    spiro1 = spiro.drop(['ХОБЛ','Хронический бронхит', 'Астма хроническая', 'Индекс тиффно', 'жел %', 'ОФВ1', 'В работе'], axis=1)
+    X = spiro1.drop(['Нарушение'], axis=1)
+    #print(X.info())
+    y = spiro1['Нарушение']
 
-    org_to_number = {organization: idx + 1 for idx, organization in enumerate(org)}
-    spiro['Организация/профгруппа'] = spiro['Организация/профгруппа'].replace(org_to_number)
-    spiro['Профессия'] = spiro['Профессия'].replace(profession_to_number)
-    def toPathology(row):
-        if row['Обструкция'] == 1:
-            return 0
-        elif row['Рестрикция'] == 1:
-            return 1
-        elif row['О+Р'] == 1:
-            return 2
-        elif row['Норма'] == 1:
-            return 3
-        else:
-            return 99
+    # Преобразование в числовой формат
+    for col in X.columns:
+        X[col] = pd.to_numeric(X[col], errors='coerce')
 
+    X = X.fillna(0).astype(np.float64)  # можно заполнить NaN как нужно
 
-    spiro['Патология'] = spiro.apply(toPathology, axis=1)
-    spiro = spiro.rename(columns= {'Unnamed: 13': 'Индекс курения'})
-
-    spiro_clear = spiro.drop(
-        ['Норма', 'Рестрикция', 'О+Р',
-         'Обструкция'], axis=1).dropna()
-
-    X = spiro_clear.drop(['Патология'], axis=1)
-    y = spiro_clear['Патология']
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
-
-    rf_classifier.fit(X_train, y_train)
-    return rf_classifier
-
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 0)
+    gnb = GaussianNB()
+    # fit the model
+    gnb.fit(X_train, y_train)
+    return gnb
 
 model = load_model()
 
-st.title('Прогнозирование наличия бронхолёгочных патологий')
+st.title('Выявление рисков развития бронхолёгочных нарушений')
 
 st.subheader("Введите данные пациента")
 
 sex_options = ['жен', 'муж']
 sex = st.selectbox('Пол', sex_options)
 
-age = st.number_input('Возраст')
 bmi = 0
 imt = ""
-
-org_dict = ['ЕПК',
-        'НПЗ',
-        'Лысогорская птицефабрика',
-        'Симоновская птицефабрика',
-        'Племзавод Трудовой',]
-org = st.selectbox('Организация/профгруппа', org_dict)
-
-pr = st.selectbox('Профессия', professions)
-stage = st.number_input('Стаж работы')
+smoke_index = 0
 
 st.subheader("Введите данные физикального обследования")
+
 col1, col2 = st.columns(2)
 with col1:
     weight_input = st.number_input('Вес (кг)', min_value=0.0, value=70.0, step=0.1)
@@ -195,7 +117,6 @@ if calculate_button:
     bmi = bmi_result
     st.write(f"Классификация: {classification}")
 
-waist = st.number_input('Обх.талии, см')
 
 st.subheader("Введите данные расчета индекса курения пациента")
 smoke = st.number_input('Сколько лет курит')
@@ -204,65 +125,157 @@ smoke_age = st.number_input('Количество сигарет в день')
 calculate_button1 = st.button('Рассчитать индекс курения')
 
 if calculate_button1:
-    smoker_result = (smoke * smoke_age)/20
+    smoke_index = (smoke * smoke_age) / 20
 
-    if smoker_result is None:
+    if smoke_index is None:
         st.error("Не удалось рассчитать индекс. Проверьте введенные данные.")
     else:
-        st.write(f"Ваш индекс: {smoker_result:.2f}")
+        st.write(f"Ваш индекс: {smoke_index:.2f}")
 
-CHSS = st.number_input('ЧСС (уд/мин.)')
-ADS = st.number_input('АДС(мм рт. ст)')
-ADD = st.number_input('АДД(мм рт. ст)')
-respiratory_rate = st.number_input('Частота дыхательных движений')
+waist = st.number_input('Окружность талии')
 
+st.subheader("Страдаете ли пациент следующими типами аллергии? (можно выбрать несколько)")
 
-st.subheader("Укажите наличие следующих рабочих факторов на месте работы пациента:")
+dermatitis = st.checkbox('Аллергический дерматит')
+hay_fever = st.checkbox('Поллиноз')
+food_allergy = st.checkbox('Пищевая аллергия')
+a_medications = st.checkbox('Аллергия на лекарства')
 
-chemical_factor = st.checkbox('Вредные химические вещества')
+st.subheader("Отметьте, есть ли у пациента приступы кашля")
+cough = st.checkbox('Есть ли приступ кашля')
+
+st.subheader("Употребляет ли пациент другие виды табачной продукции? (например, табак для кальяна, папирос, жевательный табак электронные сигареты и т.д.)")
+smoking_products = st.checkbox('Употребление другой курительной продукции')
+
+st.subheader("Укажите наличие на рабочем месте пациента следующих производственных факторов:")
+
+chemical = st.checkbox('Работа с химическими веществами или близкий контакт работника с ним')
 dust = st.checkbox('Пыль')
-work_difficult = st.checkbox('Тяжесть трудового процесса')
-
+lowt = st.checkbox('Высокие температуры')
+hight = st.checkbox('Низкие температуры')
 
 
 done = st.button('Вычислить риски')
 
+def get_feature_importances(model, feature_names, active_features):
+    """
+    Получение важности только активных признаков из модели
+    
+    Параметры:
+    model -- обученная модель GaussianNB
+    feature_names -- список всех возможных признаков
+    active_features -- список активных признаков (True/False для каждого признака)
+    """
+    # Получаем только активные признаки
+    active_feature_indices = [i for i, is_active in enumerate(active_features) if is_active]
+    active_feature_names = [name for i, name in enumerate(feature_names) if active_features[i]]
+    
+    # Вычисляем важность только для активных признаков
+    theta = model.theta_[:, active_feature_indices]  # Средние значения для активных признаков
+    importance = np.std(theta, axis=0)  # Стандартное отклонение между классами
+    
+    # Нормализуем важности в проценты
+    total_importance = np.sum(importance)
+    importance_percentages = dict(zip(active_feature_names, (importance / total_importance * 100)))
+    
+    return importance_percentages
+
+def plot_feature_importance(importances):
+    """Создание гистограммы важности признаков с процентным отображением"""
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Сортируем признаки по важности
+    sorted_importances = sorted(importances.items(), key=lambda x: x[1], reverse=True)
+    features, values = zip(*sorted_importances)
+    
+    # Создаем гистограмму
+    bars = ax.bar(features, values)
+    
+    # Настраиваем внешний вид графика
+    ax.set_title('Важность активных признаков для прогнозирования (%)', pad=20)
+    ax.set_xlabel('Признаки')
+    ax.set_ylabel('Процент важности')
+    
+    # Вращаем метки оси X для лучшей читаемости
+    plt.xticks(rotation=45, ha='right')
+    
+    # Добавляем значения над столбцами
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., 
+                height,
+                f'{height:.1f}%',
+                ha='center', va='bottom')
+    
+    plt.tight_layout()
+    return fig
+
 if done:
-
-    if sex == "муж":
-        sex_value = 1
-    else:
-        sex_value = 0
-
-
-    org_value = 0
-    if org == "ЕПК":
-        org_value = 1
-    elif org == 'НПЗ':
-        org_value = 2
-    elif org == 'Лысогорская птицефабрика':
-        org_value = 3
-    elif org == 'Племзавод Трудовой':
-        org_value = 4
-    else:
-        org_value = 5
-
-    res_chemical_factor = 1 if chemical_factor else 0
+    # Сохраняем значения ИМТ и индекса курения
+    bmi_value = st.session_state.bmi_value
+    smoke_index_value = st.session_state.smoke_index_value
+    
+    sex_encoded = 0 if sex == 'жен' else 1
+    thresholds = {
+        'bmi': 25,
+        'smoke_index': 10,
+        'waist': 80,
+    }
+    res_bmi = 1 if bmi_value > thresholds['bmi'] else 0
+    res_smoke_index = 1 if smoke_index_value > thresholds['smoke_index'] else 0
+    res_waist = 1 if waist > thresholds['waist'] else 0
+    res_dermatitis = 1 if dermatitis else 0
+    res_hay_fever = 1 if hay_fever else 0
+    res_food_allergy = 1 if food_allergy else 0
+    res_a_medications = 1 if a_medications else 0
+    res_cough = 1 if cough else 0
+    res_smoking_products = 1 if smoking_products else 0
+    res_chemical = 1 if chemical else 0
     res_dust = 1 if dust else 0
-    res_work_difficult = 1 if work_difficult else 0
+    res_lowt = 1 if lowt else 0
+    res_hight = 1 if hight else 0
+    
+    result = predictProba(
+        sex_encoded, res_bmi, res_smoke_index, res_waist, res_dermatitis, res_hay_fever,
+        res_food_allergy, res_a_medications, res_cough, res_smoking_products,
+        res_chemical, res_dust, res_lowt, res_hight
+    )
+    rec = predictDisease(
+        sex_encoded, res_bmi, res_smoke_index, res_waist, res_dermatitis, res_hay_fever,
+        res_food_allergy, res_a_medications, res_cough, res_smoking_products,
+        res_chemical, res_dust, res_lowt, res_hight
+    )
 
+    st.subheader("Результаты прогноза")
+    st.write(f"Предсказанный класс: {rec[0]}")
+    st.write(f"Вероятности по классам: {result}")
 
-
-    result = predictProba(org_value,sex_value,pr, stage, age, height_input,weight_input,bmi, waist, smoke, smoke_age, smoker_result, CHSS, ADS, ADD, respiratory_rate,
-                    chemical_factor, dust, work_difficult)
-
-    rec = predictDisease(org_value,sex_value, pr, stage, age, height_input,weight_input,bmi, waist, smoke, smoke_age, smoker_result, CHSS, ADS, ADD, respiratory_rate,
-                    chemical_factor, dust, work_difficult)
-    if rec is None:
-        st.error("Не удалось рассчитать.")
-    else:
-        if rec == 1:
-            rec_value = 'Есть вероятность наличия бронхолёгочной патологии. Необходимо проконсультироваться со специалистом!'
-        else:
-            rec_value = 'Риск бронхолёгочной патологии маловероятен.'
-        st.text(rec_value)
+    # Анализ важности только активных признаков
+    feature_names = [
+        'Пол', 'ИМТ', 'Индекс курения', 'Окружность талии',
+        'Дерматит', 'Поллиноз', 'Пищевая аллергия', 'Аллергия на лекарства',
+        'Кашель', 'Другие табачные продукты', 'Химические вещества',
+        'Пыль', 'Низкие температуры', 'Высокие температуры'
+    ]
+    
+    # Создаем список активных признаков на основе введенных данных
+    active_features = [
+        True,  # Пол
+        res_bmi > 0,  # ИМТ
+        res_smoke_index > 0,  # Индекс курения
+        res_waist > 0,  # Окружность талии
+        res_dermatitis > 0,  # Дерматит
+        res_hay_fever > 0,  # Поллиноз
+        res_food_allergy > 0,  # Пищевая аллергия
+        res_a_medications > 0,  # Аллергия на лекарства
+        res_cough > 0,  # Кашель
+        res_smoking_products > 0,  # Другие табачные продукты
+        res_chemical > 0,  # Химические вещества
+        res_dust > 0,  # Пыль
+        res_lowt > 0,  # Низкие температуры
+        res_hight > 0   # Высокие температуры
+    ]
+    
+    importances = get_feature_importances(model, feature_names, active_features)
+    fig = plot_feature_importance(importances)
+    st.pyplot(fig)
